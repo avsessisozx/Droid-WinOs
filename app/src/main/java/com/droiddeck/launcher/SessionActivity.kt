@@ -610,9 +610,9 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
         }
         val fabSide = (56 * resources.displayMetrics.density).toInt()
         val fabMargin = (16 * resources.displayMetrics.density).toInt()
-        root.addView(keyboardFab, FrameLayout.LayoutParams(fabSide, fabSide, Gravity.BOTTOM or Gravity.START).apply {
-            leftMargin = fabMargin
-            bottomMargin = fabMargin
+        root.addView(keyboardFab, FrameLayout.LayoutParams(fabSide, fabSide, Gravity.BOTTOM or Gravity.END).apply {
+            rightMargin = fabMargin
+            bottomMargin = (48 * resources.displayMetrics.density).toInt()
         })
         touchpad = TouchpadGestures(PointerGestures.slop(this), pointerListener)
         directTouchHold = DirectTouchHold(PointerGestures.slop(this), pointerListener) {
