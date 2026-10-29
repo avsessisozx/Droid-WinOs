@@ -25,7 +25,7 @@ jobs:
         run: |
           ls -la apk
           cat > notes.md <<'N'
-          Yeni: "Hata raporunu kopyala" düğmesi (cihaz bilgisi + son günlükler tek metin).
+          Yeni: programlar pencere kipinde açılır; hata raporuna son oturum günlüğü (session.log) eklendi.
           Telefonda gerçek .exe çalıştırma henüz doğrulanmadı (derleme ve birim testleri geçti).
           N
           gh release create "${{ inputs.tag }}" apk/*.apk -R "${{ github.repository }}" --target "${{ github.sha }}" --title "Droid-WinOs ${{ inputs.tag }}" --notes-file notes.md --prerelease
