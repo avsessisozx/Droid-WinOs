@@ -96,10 +96,39 @@ class WinOsActivity : Activity() {
             if (bold) setTypeface(typeface, Typeface.BOLD)
         }
 
+    private fun userDllDir() = File(Environment.getExternalStorageDirectory(), "Download/WinOs-DLL")
+
+    private fun prefixSystem32(app: android.content.Context) = File(
+        app.filesDir,
+        "linuxfs/root/.local/share/Steam/steamapps/compatdata/2564280011/pfx/drive_c/windows/system32",
+    )
+
+    private fun syncUserDlls(app: android.content.Context) {
+        val target = prefixSystem32(app)
+        if (!target.isDirectory) return
+        userDllDir().listFiles { f -> f.isFile && f.name.endsWith(".dll", ignoreCase = true) }?.forEach { src ->
+            val dst = File(target, src.name.lowercase())
+            if (!dst.isFile || dst.length() != src.length()) src.copyTo(dst, overwrite = true)
+        }
+    }
+
+    private fun missingDll(): String? {
+        val logs = File(filesDir, "linuxfs/root").listFiles { f -> f.name.startsWith("steam-") && f.name.endsWith(".log") }
+        val latest = logs?.maxByOrNull { it.lastModified() } ?: return null
+        if (System.currentTimeMillis() - latest.lastModified() > 15 * 60 * 1000) return null
+        val name = Regex("Library (\\S+) \\(which is needed by")
+            .findAll(latest.readText()).map { it.groupValues[1] }.lastOrNull() ?: return null
+        return if (File(userDllDir(), name.lowercase()).isFile) null else name
+    }
+
     private fun refreshStatus() {
         val runtime = runCatching { LinuxRuntimeInstaller.installedVersion(this) }.getOrNull()
         val phantom = runCatching { PhantomProcessLimit.read(this) }.getOrNull()
+        val missing = runCatching { missingDll() }.getOrNull()
         status.text = when {
+            missing != null -> "Son program şu Windows dosyası olmadığı için açılamadı: $missing\n" +
+                "Bilgisayarında C:\\Windows\\System32 klasöründen bu dosyayı kopyala, telefonda " +
+                "İndirilenler/WinOs-DLL klasörüne koy, sonra programı yeniden aç."
             runtime == null -> "Linux çalışma ortamı kurulu değil. Aşağıdaki DroidDeck ana ekranından kur."
             phantom != null && PhantomProcessLimit.blocksSteam(phantom) ->
                 "Uyarı: Android arka plan süreç sınırı programları kapatabilir (" +
@@ -175,6 +204,7 @@ class WinOsActivity : Activity() {
         val app = applicationContext
         Thread({
             runCatching { ensureProtonTool(app) }.onFailure { Log.w(TAG, "proton tool: ${it.message}") }
+            runCatching { syncUserDlls(app) }.onFailure { Log.w(TAG, "dll sync: ${it.message}") }
             val runner = runCatching { ensureRunner(app) }.onFailure { Log.w(TAG, "runner: ${it.message}") }.getOrDefault(false)
             val result = try {
                 AddedGames.addExe(app, exe)
