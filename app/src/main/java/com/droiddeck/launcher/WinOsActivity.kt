@@ -249,7 +249,7 @@ class WinOsActivity : Activity() {
             val text = b.toString()
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
-                runCatching { File(Environment.getExternalStorageDirectory(), "Download/winos-report.txt").writeText(text) }
+                runCatching { File(getExternalFilesDir(null), "winos-report.txt").writeText(text) }.onFailure { Log.w(TAG, "report file: ${it.message}") }
                 (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Droid-WinOs rapor", text))
                 toast("Rapor kopyalandı (${text.length / 1000} bin karakter). Sohbete yapıştır.")
             }
