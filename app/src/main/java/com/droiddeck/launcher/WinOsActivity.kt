@@ -34,6 +34,8 @@ import java.io.File
 class WinOsActivity : Activity() {
     private lateinit var list: LinearLayout
     private lateinit var status: TextView
+    private var testDesktop = true
+    private var testVerb = "runinprefix"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +76,8 @@ class WinOsActivity : Activity() {
 
     /** Lets a connected computer drive the app: winos_run=<path> starts a program, winos_report=true writes the report file. */
     private fun handleIntent(i: Intent?) {
+        i?.getStringExtra("winos_verb")?.let { testVerb = it }
+        if (i?.hasExtra("winos_desktop") == true) testDesktop = i.getBooleanExtra("winos_desktop", true)
         i?.getStringExtra("winos_run")?.let { path -> list.post { run(path) } }
         if (i?.getBooleanExtra("winos_report", false) == true) copyReport()
     }
@@ -196,12 +200,13 @@ class WinOsActivity : Activity() {
                 val command = NoSteamLaunch.addedCommand(game)
                 NoSteamLaunch.remember(command)
                 val program = if (runner) RUNNER else command.program
-                val extra = if (runner) listOf("--verb", "runinprefix") else emptyList()
+                val extra = if (runner) listOf("--verb", testVerb) else emptyList()
+                val look = listOf("--options", "PROTON_LOG=1 WINEDEBUG=err+all,fixme-all %command%")
                 startActivity(
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
                         .putExtra(SessionService.EXTRA_PROGRAM, program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window", "--desktop", "1600x720") + command.args).toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
@@ -238,6 +243,12 @@ class WinOsActivity : Activity() {
                         .append(" proton=").append(File(t, "proton").isFile).append('\n')
                 }
             }.onFailure { b.append("Proton listesi okunamadı: ${it.message}\n") }
+            runCatching {
+                File(app.filesDir, "linuxfs/root").listFiles()?.filter { it.name.startsWith("steam-") && it.name.endsWith(".log") }?.forEach { f ->
+                    b.append("\n--- ").append(f.name).append(" (son 120 satır) ---\n")
+                    f.readLines().takeLast(120).forEach { b.append(LogRedactor.redactForShare(it)).append('\n') }
+                }
+            }
             runCatching {
                 val folder = SessionLogShare.latest(app)
                 if (folder != null) {
