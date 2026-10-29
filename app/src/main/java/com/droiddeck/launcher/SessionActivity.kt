@@ -160,6 +160,7 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
     private lateinit var sessionOverlay: ComposeView
     private lateinit var loading: LoadingState
     private lateinit var hud: FusionHudHost
+    private var keyboardFab: View? = null
     private lateinit var memoryHud: com.droiddeck.launcher.session.MemoryHud
     private var padBridge: PadBridge? = null
     private var joyConVr: com.droiddeck.launcher.input.JoyConVr? = null
@@ -593,6 +594,26 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
             root.addView(keys)
         }
         keyboard = KeyboardHost(this).also { root.addView(it) }
+        keyboardFab = android.widget.TextView(this).apply {
+            text = "\u2328"
+            textSize = 26f
+            gravity = Gravity.CENTER
+            setTextColor(android.graphics.Color.WHITE)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0x99000000.toInt())
+                setStroke((2 * resources.displayMetrics.density).toInt(), 0x66FFFFFF)
+            }
+            contentDescription = "Klavye"
+            setOnClickListener { togglePcKeyboard() }
+            visibility = View.GONE
+        }
+        val fabSide = (56 * resources.displayMetrics.density).toInt()
+        val fabMargin = (16 * resources.displayMetrics.density).toInt()
+        root.addView(keyboardFab, FrameLayout.LayoutParams(fabSide, fabSide, Gravity.BOTTOM or Gravity.START).apply {
+            leftMargin = fabMargin
+            bottomMargin = fabMargin
+        })
         touchpad = TouchpadGestures(PointerGestures.slop(this), pointerListener)
         directTouchHold = DirectTouchHold(PointerGestures.slop(this), pointerListener) {
             WaylandCompositor.nativeSendTouch(3, -1, 0, 0)
@@ -3086,6 +3107,9 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
             .takeIf { it.isFile }
             ?.let { FileUtils.readString(it)?.trim()?.lowercase() }
             ?: SessionPrefs.oscMode(this)
+        val fabWanted = forced == SessionPrefs.OSC_NEVER && controllerSettings?.keyboardButton != false &&
+            !pipUi && unfoldedPanel == null && !pcKeyboardOpen && !SessionState.suspended
+        keyboardFab?.visibility = if (fabWanted) View.VISIBLE else View.GONE
         val controls = onScreenControls ?: return
         if (pipUi || unfoldedPanel != null || pcKeyboardOpen ||
             (SessionState.mode == SessionService.MODE_STEAM && !SessionPrefs.builtinPad(this))) {
@@ -3111,12 +3135,10 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
             applyTouchRouting()
         }
         controls.setButtonsOnly(buttonsOnly)
-        val keyboardOnly = forced == SessionPrefs.OSC_NEVER
-        controls.setKeyboardOnly(keyboardOnly)
         val show = when (forced) {
             SessionPrefs.OSC_ALWAYS -> true
             SessionPrefs.OSC_STEAM_QAM -> true
-            SessionPrefs.OSC_NEVER -> controllerSettings?.keyboardButton != false
+            SessionPrefs.OSC_NEVER -> false
             SessionPrefs.OSC_STEAM_TOUCH -> SessionState.mode == SessionService.MODE_STEAM ||
                 (!PadBridge.anyControllerConnected() && SessionState.mode != SessionService.MODE_DESKTOP)
             else -> !PadBridge.anyControllerConnected() && !SteamControllerBle.connected &&
@@ -3141,7 +3163,6 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
         Log.i(TAG, "on-screen controls " + when {
             !drawn -> "hidden"
             buttonsOnly -> "Steam + QAM"
-            keyboardOnly -> "keyboard button only"
             else -> "full pad"
         })
     }

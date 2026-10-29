@@ -93,7 +93,6 @@ class OnScreenControls(
 
     private var buttonsOnly = false
     val isButtonsOnly: Boolean get() = buttonsOnly
-    private var keyboardOnly = false
     private var quickHidden = false
     private var quickPressedBy = -1
     private var keyboardPressedBy = -1
@@ -187,16 +186,8 @@ class OnScreenControls(
         relayout()
     }
 
-    /** Draws only the keyboard button so pad touches fall through to the program underneath. */
-    fun setKeyboardOnly(enabled: Boolean) {
-        if (keyboardOnly == enabled) return
-        releaseAll()
-        keyboardOnly = enabled
-        invalidate()
-    }
-
     fun setQuickHidden(hidden: Boolean) {
-        if (buttonsOnly || keyboardOnly || editing || quickHidden == hidden) return
+        if (buttonsOnly || editing || quickHidden == hidden) return
         if (hidden) releaseAll()
         quickHidden = hidden
         invalidate()
@@ -393,7 +384,7 @@ class OnScreenControls(
     }
 
     override fun onDraw(canvas: Canvas) {
-        if (!quickHidden && !keyboardOnly) for (control in controls) {
+        if (!quickHidden) for (control in controls) {
             if (!isVisible(control)) continue
             if (control.stick >= 0 && settings.adaptiveSticks && !editing && control.pressedBy == -1) continue
             val held = control.pressedBy != -1
@@ -452,7 +443,7 @@ class OnScreenControls(
                     canvas.drawRoundRect(box, single.halfH, single.halfH, stroke)
                 } else canvas.drawCircle(x, y, extent(group) + dp(6f), stroke)
             }
-        } else if (!buttonsOnly && !keyboardOnly) {
+        } else if (!buttonsOnly) {
             val (x, y) = quickCenter()
             val radius = dp(18f)
             fill.color = Color.argb(190, Color.red(idleFill), Color.green(idleFill), Color.blue(idleFill))
@@ -535,7 +526,6 @@ class OnScreenControls(
                     return true
                 }
                 if (keyboardPressedBy != -1) return true
-                if (keyboardOnly) return false
                 if (!buttonsOnly && event.actionMasked == MotionEvent.ACTION_DOWN && quickContains(x, y)) {
                     quickPressedBy = event.getPointerId(index)
                     return true
@@ -683,12 +673,12 @@ class OnScreenControls(
         targets.minByOrNull { abs(position - it) }?.takeIf { abs(position - it) <= dp(SNAP_DP) }
 
     private fun controlAt(x: Float, y: Float): Control? =
-        if (keyboardOnly) null else controls.firstOrNull {
+        controls.firstOrNull {
             !quickHidden && isVisible(it) && (editing || !settings.adaptiveSticks || it.stick < 0) && it.contains(x, y, it.radius)
         }
 
     private fun adaptiveStickAt(x: Float, y: Float): Control? {
-        if (!settings.adaptiveSticks || editing || buttonsOnly || keyboardOnly || quickHidden) return null
+        if (!settings.adaptiveSticks || editing || buttonsOnly || quickHidden) return null
         if (x < safe.left || x >= width - safe.right || y < safe.top || y >= height - safe.bottom) return null
         if (controls.any { it.stick < 0 && isVisible(it) && it.contains(x, y, it.radius, 5f) }) return null
         return controls.filter {
