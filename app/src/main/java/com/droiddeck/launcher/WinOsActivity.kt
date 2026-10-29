@@ -241,7 +241,7 @@ class WinOsActivity : Activity() {
                 val shell = shellMode
                 shellMode = false
                 val command = NoSteamLaunch.addedCommand(game).let { c ->
-                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + "explorer.exe", c.name) else c
+                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + "/root/.local/share/Steam/steamapps/compatdata/2564280011/pfx/drive_c/windows/explorer.exe", c.name) else c
                 }
                 NoSteamLaunch.remember(command)
                 val program = if (runner) RUNNER else command.program
