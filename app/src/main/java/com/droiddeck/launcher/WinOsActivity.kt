@@ -36,6 +36,7 @@ class WinOsActivity : Activity() {
     private lateinit var status: TextView
     private var testDesktop = true
     private var testVerb = "runinprefix"
+    private var programArgs: List<String> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +79,7 @@ class WinOsActivity : Activity() {
     private fun handleIntent(i: Intent?) {
         i?.getStringExtra("winos_verb")?.let { testVerb = it }
         if (i?.hasExtra("winos_desktop") == true) testDesktop = i.getBooleanExtra("winos_desktop", true)
+        programArgs = i?.getStringExtra("winos_args")?.split(" ")?.filter { it.isNotEmpty() } ?: emptyList()
         i?.getStringExtra("winos_run")?.let { path -> list.post { run(path) } }
         if (i?.getBooleanExtra("winos_report", false) == true) copyReport()
     }
@@ -236,7 +238,7 @@ class WinOsActivity : Activity() {
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
                         .putExtra(SessionService.EXTRA_PROGRAM, program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args).toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args + programArgs).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
