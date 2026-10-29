@@ -171,6 +171,7 @@ class WinOsActivity : Activity() {
         val app = applicationContext
         Thread({
             runCatching { ensureProtonTool(app) }.onFailure { Log.w(TAG, "proton tool: ${it.message}") }
+            val runner = runCatching { ensureRunner(app) }.onFailure { Log.w(TAG, "runner: ${it.message}") }.getOrDefault(false)
             val result = try {
                 AddedGames.addExe(app, exe)
             } catch (e: Exception) {
@@ -194,11 +195,13 @@ class WinOsActivity : Activity() {
                 }
                 val command = NoSteamLaunch.addedCommand(game)
                 NoSteamLaunch.remember(command)
+                val program = if (runner) RUNNER else command.program
+                val extra = if (runner) listOf("--verb", "runinprefix") else emptyList()
                 startActivity(
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
-                        .putExtra(SessionService.EXTRA_PROGRAM, command.program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (listOf("--window", "--desktop", "1600x720") + command.args).toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM, program)
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window", "--desktop", "1600x720") + command.args).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
@@ -283,10 +286,28 @@ class WinOsActivity : Activity() {
         Log.i(TAG, "linked Proton ${real.name} into compatibilitytools.d")
     }
 
+    /**
+     * Proton's steam.exe wrapper needs a running Steam client. The runinprefix verb starts the program directly,
+     * but droiddeck-proton-run only accepts two verbs, so keep a copy that also accepts runinprefix.
+     */
+    private fun ensureRunner(app: android.content.Context): Boolean {
+        val bin = File(app.filesDir, "linuxfs/usr/local/bin")
+        val original = File(bin, "droiddeck-proton-run")
+        if (!original.isFile) return false
+        val text = original.readText()
+        val patched = text.replace("VERBS = (VERB, \"run\")", "VERBS = (VERB, \"run\", \"runinprefix\")")
+        if (patched == text) { Log.w(TAG, "VERBS line not found"); return false }
+        val copy = File(bin, "winos-proton-run")
+        copy.writeText(patched)
+        copy.setExecutable(true, false)
+        return true
+    }
+
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 
     private companion object {
         const val TAG = "WinOs"
+        const val RUNNER = "/usr/local/bin/winos-proton-run"
         const val PREFS = "winos"
         const val KEY = "programs"
         const val REQ_PICK = 4201
