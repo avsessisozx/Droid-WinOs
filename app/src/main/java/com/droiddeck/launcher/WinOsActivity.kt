@@ -37,6 +37,7 @@ class WinOsActivity : Activity() {
     private var testDesktop = true
     private var testVerb = "runinprefix"
     private var programArgs: List<String> = emptyList()
+    private var shellMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +58,13 @@ class WinOsActivity : Activity() {
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(ScrollView(this).apply { addView(list) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(Button(this).apply {
+            text = "Windows masaüstünü aç"
+            setOnClickListener {
+                val base = saved().firstOrNull { File(it).isFile }
+                if (base == null) toast("Önce \"Program ekle\" ile bir .exe ekle.") else { shellMode = true; run(base) }
+            }
+        })
         root.addView(Button(this).apply {
             text = "Hata raporunu kopyala"
             setOnClickListener { copyReport() }
@@ -80,6 +88,7 @@ class WinOsActivity : Activity() {
         i?.getStringExtra("winos_verb")?.let { testVerb = it }
         if (i?.hasExtra("winos_desktop") == true) testDesktop = i.getBooleanExtra("winos_desktop", true)
         programArgs = i?.getStringExtra("winos_args")?.split(" ")?.filter { it.isNotEmpty() } ?: emptyList()
+        shellMode = i?.getBooleanExtra("winos_shell", false) == true
         i?.getStringExtra("winos_run")?.let { path -> list.post { run(path) } }
         if (i?.getBooleanExtra("winos_report", false) == true) copyReport()
     }
@@ -229,7 +238,11 @@ class WinOsActivity : Activity() {
                     )
                     return@runOnUiThread
                 }
-                val command = NoSteamLaunch.addedCommand(game)
+                val shell = shellMode
+                shellMode = false
+                val command = NoSteamLaunch.addedCommand(game).let { c ->
+                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + "explorer.exe", c.name) else c
+                }
                 NoSteamLaunch.remember(command)
                 val program = if (runner) RUNNER else command.program
                 val extra = if (runner) listOf("--verb", testVerb) else emptyList()
@@ -238,7 +251,7 @@ class WinOsActivity : Activity() {
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
                         .putExtra(SessionService.EXTRA_PROGRAM, program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args + programArgs).toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop && !shell) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args + (if (shell) listOf("/desktop=shell,1600x720") else programArgs)).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
