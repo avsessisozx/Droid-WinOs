@@ -220,7 +220,7 @@ class WinOsActivity : Activity() {
             runCatching { syncUserDlls(app) }.onFailure { Log.w(TAG, "dll sync: ${it.message}") }
             runCatching {
                 com.droiddeck.launcher.session.SessionPrefs.setOscMode(app, com.droiddeck.launcher.session.SessionPrefs.OSC_NEVER)
-                com.droiddeck.launcher.session.SessionPrefs.setHudEnabled(app, false)
+                app.getSharedPreferences("session", MODE_PRIVATE).edit().putBoolean("hud", false).putBoolean("hudDeck", false).apply()
             }.onFailure { Log.w(TAG, "overlay prefs: ${it.message}") }
             val runner = runCatching { ensureRunner(app) }.onFailure { Log.w(TAG, "runner: ${it.message}") }.getOrDefault(false)
             val result = try {
@@ -249,7 +249,16 @@ class WinOsActivity : Activity() {
                 shellMode = false
                 guestExe = null
                 val command = NoSteamLaunch.addedCommand(game).let { c ->
-                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + (override ?: (PREFIX_GUEST + "/drive_c/windows/explorer.exe")), c.name) else c
+                    val args = c.args.toMutableList()
+                    val target = override ?: if (shell) PREFIX_GUEST + "/drive_c/windows/explorer.exe"
+                        else com.droiddeck.launcher.frontend.AddedGames.guestPath(app, exe)
+                    if (target != null) args[args.lastIndex] = target
+                    if (!shell) {
+                        val dir = exe.parentFile?.let { com.droiddeck.launcher.frontend.AddedGames.guestPath(app, it) }
+                        val at = args.indexOf("--dir")
+                        if (dir != null && at >= 0 && at + 1 < args.size) args[at + 1] = dir
+                    }
+                    NoSteamLaunch.Command(c.program, args, c.name)
                 }
                 NoSteamLaunch.remember(command)
                 val program = if (runner) RUNNER else command.program
