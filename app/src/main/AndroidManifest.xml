@@ -116,6 +116,19 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WinOsActivity"
+            android:label="Droid-WinOs"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:screenOrientation="user"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity-alias
             android:name=".MainActivity"
             android:targetActivity=".FrontEndActivity"
