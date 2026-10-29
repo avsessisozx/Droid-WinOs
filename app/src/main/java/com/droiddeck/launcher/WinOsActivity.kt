@@ -62,6 +62,19 @@ class WinOsActivity : Activity() {
             setOnClickListener { startActivity(Intent(this@WinOsActivity, FrontEndActivity::class.java)) }
         })
         setContentView(root)
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** Lets a connected computer drive the app: winos_run=<path> starts a program, winos_report=true writes the report file. */
+    private fun handleIntent(i: Intent?) {
+        i?.getStringExtra("winos_run")?.let { path -> list.post { run(path) } }
+        if (i?.getBooleanExtra("winos_report", false) == true) copyReport()
     }
 
     override fun onResume() {
@@ -203,6 +216,21 @@ class WinOsActivity : Activity() {
             b.append("\nÇalışma ortamı: ").append(runCatching { LinuxRuntimeInstaller.installedVersion(app) }.getOrNull() ?: "kurulu değil")
             b.append("\nOturum açık: ").append(SessionState.running).append('\n')
             runCatching {
+                val root = File(app.filesDir, "linuxfs")
+                b.append("\n--- Proton klasörleri ---\n")
+                listOf("root/.local/share/Steam/compatibilitytools.d", "usr/share/steam/compatibilitytools.d",
+                    "usr/local/share/steam/compatibilitytools.d", "root/.local/share/Steam/steamapps/common").forEach { rel ->
+                    val d = File(root, rel)
+                    b.append(rel).append(": ").append(if (d.isDirectory) d.list()?.sorted()?.joinToString(", ").orEmpty().ifEmpty { "(boş)" } else "(yok)").append('\n')
+                }
+                root.listFiles()?.filter { it.name.startsWith(".droiddeck-pkg") }?.forEach { b.append(it.name).append('\n') }
+                File(root, "root/.local/share/Steam/compatibilitytools.d").listFiles()?.forEach { t ->
+                    b.append(t.name).append(" -> vdf=").append(File(t, "compatibilitytool.vdf").isFile)
+                        .append(" manifest=").append(File(t, "toolmanifest.vdf").isFile)
+                        .append(" proton=").append(File(t, "proton").isFile).append('\n')
+                }
+            }.onFailure { b.append("Proton listesi okunamadı: ${it.message}\n") }
+            runCatching {
                 val folder = SessionLogShare.latest(app)
                 if (folder != null) {
                     b.append("\nSon oturum günlükleri: ").append(folder.name).append('\n')
@@ -221,6 +249,7 @@ class WinOsActivity : Activity() {
             val text = b.toString()
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
+                runCatching { File(Environment.getExternalStorageDirectory(), "Download/winos-report.txt").writeText(text) }
                 (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Droid-WinOs rapor", text))
                 toast("Rapor kopyalandı (${text.length / 1000} bin karakter). Sohbete yapıştır.")
             }
