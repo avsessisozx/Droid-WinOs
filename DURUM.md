@@ -12,14 +12,14 @@ Tarih: 2026-10-30
 - Yazma: wine notepad ve Notepad++ 8.9.8.1 (32 bit) içine yazıldı.
 - 32 bit program: Notepad++ 8.9.8.1 (x86) ARM64 Proton + FEX üzerinde açıldı.
 - Görev çubuğu (WinOsBar): "Başlat" menüsü büyük satırlarla açılıyor, seçilen program başlıyor, açık pencereler için düğme çıkıyor, düğme pencereyi öne getiriyor. Notepad++ gibi tam ekran bir pencere açıkken çubuk görünür kalıyor.
-- qBittorrent Portable kurucusu ve ana penceresi.
+- Ses: WinOsBeep.exe (winmm waveOut, 440 Hz, 8 sn) çalındı; waveOutOpen başarıyla açıldı (open=0) ve çalma tamamlandı; bu sırada Android'de uygulamanın AAudio çıkışı (USAGE_GAME) "started" görünüyor.
+- qBittorrent Portable kurucusu ve ana penceresi (Qt tabanlı, büyük program).
 - Eksik DLL mesajı ve İndirilenler/WinOs-DLL otomatik yükleme.
-- Ses kanalı açık: oturum sırasında uygulamanın AAudio çıkışı (USAGE_GAME) "started" durumda.
 
 ## Doğrulanmadı
-- Sesin hoparlörden gerçekten duyulması (ses çıkaran bir programla denenmeli).
+- Sesin hoparlörden gerçekten duyulması (kulakla kontrol gerekiyor; ses yolu açık).
 - Görev çubuğu her zaman üstte değil: bazı tam ekran pencereler (özellikle ilk açılışta) çubuğu örtebiliyor; pencereyi biraz oynatınca/çubuk yenilenince düzeliyor. Kalıcı çözüm için Win32 "appbar" benzeri bir yol gerekiyor.
-- Office gibi büyük programlar (yalnızca Notepad++ denendi).
+- Office benzeri büyük programlar (Notepad++ 32 bit ve qBittorrent denenmiş durumda; Word/Excel türü bir program kurulamadı, indirme adresleri kapalı).
 - Kablosuz hata ayıklama eşleştirme sorunu.
 
 ## Bilinen sorunlar
