@@ -38,6 +38,7 @@ class WinOsActivity : Activity() {
     private var testVerb = "runinprefix"
     private var programArgs: List<String> = emptyList()
     private var shellMode = false
+    private var guestExe: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,6 +90,7 @@ class WinOsActivity : Activity() {
         if (i?.hasExtra("winos_desktop") == true) testDesktop = i.getBooleanExtra("winos_desktop", true)
         programArgs = i?.getStringExtra("winos_args")?.split(" ")?.filter { it.isNotEmpty() } ?: emptyList()
         shellMode = i?.getBooleanExtra("winos_shell", false) == true
+        guestExe = i?.getStringExtra("winos_guest_exe")
         i?.getStringExtra("winos_run")?.let { path -> list.post { run(path) } }
         if (i?.getBooleanExtra("winos_report", false) == true) copyReport()
     }
@@ -238,10 +240,12 @@ class WinOsActivity : Activity() {
                     )
                     return@runOnUiThread
                 }
-                val shell = shellMode
+                val override = guestExe
+                val shell = shellMode || override != null
                 shellMode = false
+                guestExe = null
                 val command = NoSteamLaunch.addedCommand(game).let { c ->
-                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + "/root/.local/share/Steam/steamapps/compatdata/2564280011/pfx/drive_c/windows/explorer.exe", c.name) else c
+                    if (shell) NoSteamLaunch.Command(c.program, c.args.dropLast(1) + (override ?: (PREFIX_GUEST + "/drive_c/windows/explorer.exe")), c.name) else c
                 }
                 NoSteamLaunch.remember(command)
                 val program = if (runner) RUNNER else command.program
@@ -251,7 +255,7 @@ class WinOsActivity : Activity() {
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
                         .putExtra(SessionService.EXTRA_PROGRAM, program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop && !shell) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args + (if (shell) listOf("/desktop=shell,1600x720") else programArgs)).toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (extra + listOf("--window") + (if (testDesktop && (override != null || !shell)) listOf("--desktop", "1600x720") else emptyList()) + (if (command.args.contains("--options")) emptyList() else look) + command.args + (if (shell && programArgs.isEmpty() && override == null) listOf("/desktop=shell,1600x720") else programArgs)).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
@@ -368,6 +372,7 @@ class WinOsActivity : Activity() {
 
     private companion object {
         const val TAG = "WinOs"
+        const val PREFIX_GUEST = "/root/.local/share/Steam/steamapps/compatdata/2564280011/pfx"
         const val RUNNER = "/usr/local/bin/winos-proton-run"
         const val PREFS = "winos"
         const val KEY = "programs"
