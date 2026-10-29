@@ -218,6 +218,10 @@ class WinOsActivity : Activity() {
         Thread({
             runCatching { ensureProtonTool(app) }.onFailure { Log.w(TAG, "proton tool: ${it.message}") }
             runCatching { syncUserDlls(app) }.onFailure { Log.w(TAG, "dll sync: ${it.message}") }
+            runCatching {
+                com.droiddeck.launcher.session.SessionPrefs.setOscMode(app, com.droiddeck.launcher.session.SessionPrefs.OSC_NEVER)
+                com.droiddeck.launcher.session.SessionPrefs.setHudEnabled(app, false)
+            }.onFailure { Log.w(TAG, "overlay prefs: ${it.message}") }
             val runner = runCatching { ensureRunner(app) }.onFailure { Log.w(TAG, "runner: ${it.message}") }.getOrDefault(false)
             val result = try {
                 AddedGames.addExe(app, exe)
