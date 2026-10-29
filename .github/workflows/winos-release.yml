@@ -25,9 +25,9 @@ jobs:
         run: |
           ls -la apk
           cat > notes.md <<'N'
-          Yeni: Windows dosya yöneticisi penceresi (Windows masaüstünü aç düğmesi), oyun tuşları ve fps kutusu gizlendi.
+          Yeni: oyun tuşları ve fps kutusu gizlendi; gizliyken de ekran klavyesi düğmesi ekranda kalıyor.
           Yeni: eksik Windows dosyası (DLL) olursa ekranda hangisi olduğu yazar; İndirilenler/WinOs-DLL klasörüne koyunca otomatik yüklenir.
           Telefonda doğrulandı (Xiaomi Mi 10T Pro): kendi test programı, qBittorrent Portable kurulumu ve ana penceresi.
-          Doğrulanmadı: klavye, fare, ses, görev çubuklu tam masaüstü, Office gibi büyük programlar.
+          Doğrulanmadı: dokunma, yazı yazma, ses, görev çubuklu tam masaüstü, Office gibi büyük programlar.
           N
           gh release create "${{ inputs.tag }}" apk/*.apk -R "${{ github.repository }}" --target "${{ github.sha }}" --title "Droid-WinOs ${{ inputs.tag }}" --notes-file notes.md --prerelease
