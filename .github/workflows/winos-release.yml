@@ -25,7 +25,7 @@ jobs:
         run: |
           ls -la apk
           cat > notes.md <<'N'
-          Yeni: rapor dosyası uygulamanın kendi klasörüne yazılır.
+          Yeni: ARM64 Proton, program başlatıcının aradığı klasöre bağlanır (Proton bulunamadı hatası düzeltildi).
           Telefonda gerçek .exe çalıştırma henüz doğrulanmadı (derleme ve birim testleri geçti).
           N
           gh release create "${{ inputs.tag }}" apk/*.apk -R "${{ github.repository }}" --target "${{ github.sha }}" --title "Droid-WinOs ${{ inputs.tag }}" --notes-file notes.md --prerelease
