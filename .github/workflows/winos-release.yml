@@ -25,7 +25,7 @@ jobs:
         run: |
           ls -la apk
           cat > notes.md <<'N'
-          Droid-WinOs: açılışta kendi ekranı gelir; .exe seçip Steam olmadan çalıştırır.
+          Yeni: "Hata raporunu kopyala" düğmesi (cihaz bilgisi + son günlükler tek metin).
           Telefonda gerçek .exe çalıştırma henüz doğrulanmadı (derleme ve birim testleri geçti).
           N
           gh release create "${{ inputs.tag }}" apk/*.apk -R "${{ github.repository }}" --target "${{ github.sha }}" --title "Droid-WinOs ${{ inputs.tag }}" --notes-file notes.md --prerelease
