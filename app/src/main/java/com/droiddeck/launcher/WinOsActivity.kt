@@ -60,7 +60,14 @@ class WinOsActivity : Activity() {
         root.addView(ScrollView(this).apply { addView(list) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         root.addView(Button(this).apply {
-            text = "Windows masaüstünü aç"
+            text = "Windows masaüstü (görev çubuğu)"
+            setOnClickListener {
+                val bar = ensureBar(applicationContext)
+                if (bar == null) toast("Görev çubuğu dosyası çıkarılamadı.") else run(bar.path)
+            }
+        })
+        root.addView(Button(this).apply {
+            text = "Windows dosya yöneticisi"
             setOnClickListener {
                 val base = saved().firstOrNull { File(it).isFile }
                 if (base == null) toast("Önce \"Program ekle\" ile bir .exe ekle.") else { shellMode = true; run(base) }
@@ -110,6 +117,19 @@ class WinOsActivity : Activity() {
         }
 
     private fun userDllDir() = File(Environment.getExternalStorageDirectory(), "Download/WinOs-DLL")
+
+    /** Unpacks the bundled taskbar into shared storage so the guest can start it from Z:. */
+    private fun ensureBar(app: android.content.Context): File? {
+        val dir = File(Environment.getExternalStorageDirectory(), "Download/WinOs-Bar")
+        val out = File(dir, "WinOsBar.exe")
+        val bytes = runCatching { app.assets.open("winos/WinOsBar.exe").use { it.readBytes() } }.getOrNull()
+        if (bytes == null) return out.takeIf { it.isFile }
+        if (!out.isFile || out.length() != bytes.size.toLong()) {
+            dir.mkdirs()
+            runCatching { out.writeBytes(bytes) }.onFailure { Log.w(TAG, "bar copy: ${it.message}") }
+        }
+        return out.takeIf { it.isFile }
+    }
 
     private fun prefixSystem32(app: android.content.Context) = File(
         app.filesDir,
@@ -220,6 +240,7 @@ class WinOsActivity : Activity() {
             runCatching { syncUserDlls(app) }.onFailure { Log.w(TAG, "dll sync: ${it.message}") }
             runCatching {
                 com.droiddeck.launcher.session.SessionPrefs.setOscMode(app, com.droiddeck.launcher.session.SessionPrefs.OSC_NEVER)
+                com.droiddeck.launcher.session.SessionPrefs.setTouchMode(app, com.droiddeck.launcher.session.SessionPrefs.TOUCH_DIRECT)
                 app.getSharedPreferences("session", MODE_PRIVATE).edit().putBoolean("hud", false).putBoolean("hudDeck", false).apply()
             }.onFailure { Log.w(TAG, "overlay prefs: ${it.message}") }
             val runner = runCatching { ensureRunner(app) }.onFailure { Log.w(TAG, "runner: ${it.message}") }.getOrDefault(false)
