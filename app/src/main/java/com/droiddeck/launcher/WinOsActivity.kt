@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.system.Os
 import android.os.Environment
 import android.util.Log
 import android.view.Gravity
@@ -169,6 +170,7 @@ class WinOsActivity : Activity() {
         }
         val app = applicationContext
         Thread({
+            runCatching { ensureProtonTool(app) }.onFailure { Log.w(TAG, "proton tool: ${it.message}") }
             val result = try {
                 AddedGames.addExe(app, exe)
             } catch (e: Exception) {
@@ -223,6 +225,9 @@ class WinOsActivity : Activity() {
                     val d = File(root, rel)
                     b.append(rel).append(": ").append(if (d.isDirectory) d.list()?.sorted()?.joinToString(", ").orEmpty().ifEmpty { "(boş)" } else "(yok)").append('\n')
                 }
+                File(root, "root/.local/share/Steam/steamapps/common").listFiles()?.forEach { t ->
+                    b.append("[").append(t.name).append("] ").append(t.list()?.sorted()?.take(40)?.joinToString(", ")).append('\n')
+                }
                 root.listFiles()?.filter { it.name.startsWith(".droiddeck-pkg") }?.forEach { b.append(it.name).append('\n') }
                 File(root, "root/.local/share/Steam/compatibilitytools.d").listFiles()?.forEach { t ->
                     b.append(t.name).append(" -> vdf=").append(File(t, "compatibilitytool.vdf").isFile)
@@ -254,6 +259,28 @@ class WinOsActivity : Activity() {
                 toast("Rapor kopyalandı (${text.length / 1000} bin karakter). Sohbete yapıştır.")
             }
         }, "winos-report").start()
+    }
+
+    /**
+     * droiddeck-proton-run only looks in compatibilitytools.d, but the ARM64 Proton is installed under steamapps/common.
+     * Link it into compatibilitytools.d (and add the small descriptor Steam would add) so the launcher finds it.
+     */
+    private fun ensureProtonTool(app: android.content.Context) {
+        val steam = File(app.filesDir, "linuxfs/root/.local/share/Steam")
+        val tools = File(steam, "compatibilitytools.d")
+        if (tools.listFiles()?.any { File(it, "toolmanifest.vdf").exists() } == true) return
+        val real = File(steam, "steamapps/common").listFiles()
+            ?.firstOrNull { File(it, "proton").isFile && File(it, "toolmanifest.vdf").isFile } ?: run {
+                Log.w(TAG, "no Proton folder under steamapps/common"); return }
+        val descriptor = File(real, "compatibilitytool.vdf")
+        if (!descriptor.isFile || !descriptor.readText().contains("from_oslist")) {
+            descriptor.writeText("\"compatibilitytools\"\n{\n  \"compat_tools\"\n  {\n    \"Proton-ARM64-WinOs\"\n    {\n" +
+                "      \"install_path\" \".\"\n      \"display_name\" \"Proton ARM64\"\n      \"from_oslist\" \"windows\"\n      \"to_oslist\" \"linux\"\n    }\n  }\n}\n")
+        }
+        tools.mkdirs()
+        val link = File(tools, "Proton-ARM64-WinOs")
+        if (!link.exists()) Os.symlink("../steamapps/common/" + real.name, link.path)
+        Log.i(TAG, "linked Proton ${real.name} into compatibilitytools.d")
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
