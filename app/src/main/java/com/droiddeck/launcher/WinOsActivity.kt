@@ -1,6 +1,8 @@
 package com.droiddeck.launcher
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -19,6 +21,9 @@ import com.droiddeck.launcher.files.InAppFilePicker
 import com.droiddeck.launcher.frontend.AddedGames
 import com.droiddeck.launcher.runtime.LinuxRuntimeInstaller
 import com.droiddeck.launcher.session.NoSteamLaunch
+import com.droiddeck.launcher.core.DeviceReport
+import com.droiddeck.launcher.core.LogRedactor
+import com.droiddeck.launcher.session.SessionLogShare
 import com.droiddeck.launcher.session.SessionService
 import com.droiddeck.launcher.session.SessionState
 import org.json.JSONArray
@@ -48,6 +53,10 @@ class WinOsActivity : Activity() {
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(ScrollView(this).apply { addView(list) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(Button(this).apply {
+            text = "Hata raporunu kopyala"
+            setOnClickListener { copyReport() }
+        })
         root.addView(Button(this).apply {
             text = "DroidDeck ana ekranı (kurulum ve ayarlar)"
             setOnClickListener { startActivity(Intent(this@WinOsActivity, FrontEndActivity::class.java)) }
@@ -179,6 +188,43 @@ class WinOsActivity : Activity() {
                 )
             }
         }, "winos-run").start()
+    }
+
+    /** One copyable text with device info, saved programs and the latest logs, to paste straight into the chat. */
+    private fun copyReport() {
+        toast("Rapor hazırlanıyor...")
+        val app = applicationContext
+        Thread({
+            val b = StringBuilder()
+            b.append("Droid-WinOs hata raporu\n")
+            runCatching { b.append(DeviceReport.build(app, "winos")) }.onFailure { b.append("DeviceReport hata: ${it.message}\n") }
+            b.append("\n\nEklenen programlar\n")
+            saved().forEach { b.append(it).append(if (File(it).isFile) "" else "  (yok)").append('\n') }
+            b.append("\nÇalışma ortamı: ").append(runCatching { LinuxRuntimeInstaller.installedVersion(app) }.getOrNull() ?: "kurulu değil")
+            b.append("\nOturum açık: ").append(SessionState.running).append('\n')
+            runCatching {
+                val folder = SessionLogShare.latest(app)
+                if (folder != null) {
+                    b.append("\nSon oturum günlükleri: ").append(folder.name).append('\n')
+                    folder.listFiles()?.filter { LogRedactor.isText(it) }?.sortedBy { it.name }?.take(8)?.forEach { f ->
+                        b.append("\n--- ").append(f.name).append(" (son 80 satır) ---\n")
+                        f.readLines().takeLast(80).forEach { b.append(LogRedactor.redactForShare(it)).append('\n') }
+                    }
+                } else b.append("\nHenüz oturum günlüğü yok.\n")
+            }.onFailure { b.append("Günlük okunamadı: ${it.message}\n") }
+            runCatching {
+                val p = ProcessBuilder("logcat", "-d", "-t", "300").redirectErrorStream(true).start()
+                val lines = p.inputStream.bufferedReader().readLines()
+                b.append("\n--- Uygulama logcat (son 300) ---\n")
+                lines.forEach { b.append(LogRedactor.redactForShare(it)).append('\n') }
+            }
+            val text = b.toString()
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Droid-WinOs rapor", text))
+                toast("Rapor kopyalandı (${text.length / 1000} bin karakter). Sohbete yapıştır.")
+            }
+        }, "winos-report").start()
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
