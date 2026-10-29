@@ -1,3 +1,22 @@
+# Droid-WinOs
+
+Windows programlarını (.exe) Android telefonda, Steam olmadan çalıştırmayı deneyen uygulama. [DroidDeck](https://github.com/Droid-Deck/DroidDeck) (GPL-3.0) tabanlı kişisel bir fork'tur.
+
+## Nasıl kullanılır
+1. [Releases](../../releases) sayfasından `app-release.apk` dosyasını indirip kur (resmî DroidDeck kuruluysa önce onu kaldır).
+2. Uygulamayı aç, DroidDeck ana ekranı düğmesinden Linux çalışma ortamını kur.
+3. "Program ekle (.exe)" ile bir program seç, listeden dokunup çalıştır. Silmek için uzun bas.
+
+## Durum
+- Derleme ve birim testleri geçiyor.
+- Telefonda gerçek .exe çalıştırma henüz doğrulanmadı. Sorun olursa DroidDeck içindeki "Share logs" ile günlüğü paylaş.
+
+Bu proje DroidDeck ekibiyle bağlantılı değildir; kod GPL-3.0 lisansıyla kullanılmıştır, değişiklikler Claude (yapay zekâ) yardımıyla yapılmıştır.
+
+---
+
+## Upstream: DroidDeck
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="artwork/droiddeck-banner-dark.svg">
