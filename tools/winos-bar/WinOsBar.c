@@ -178,7 +178,7 @@ static void layout(void) {
         ReleaseDC(g_bar, dc);
         int w = sz.cx + 28;
         if (w < 90) w = 90;
-        if (w > 280) w = 280;
+        if (w > 340) w = 340;
         if (x + w > rc.right - 8) break;
         MoveWindow(g_tasks[i], x, 8, w, bh, TRUE);
         x += w + 6;
@@ -193,7 +193,10 @@ static void rebuild_tasks(void) {
     g_taskCount = 0;
 
     for (int i = 0; i < g_foundCount && g_taskCount < MAX_TASKS; i++) {
-        HWND b = CreateWindowExW(0, L"BUTTON", g_found[i].title,
+        WCHAR label[80];
+        lstrcpynW(label, g_found[i].title, 40);
+        if (lstrlenW(g_found[i].title) > 39) lstrcatW(label, L"...");
+        HWND b = CreateWindowExW(0, L"BUTTON", label,
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_FLAT,
             0, 0, 10, 10, g_bar, (HMENU)(INT_PTR)(ID_TASK_BASE + g_taskCount), NULL, NULL);
         if (!b) continue;
@@ -206,9 +209,31 @@ static void rebuild_tasks(void) {
     InvalidateRect(g_bar, NULL, TRUE);
 }
 
+static void keep_windows_off_bar(void) {
+    static DWORD lastLog;
+    int sw = GetSystemMetrics(SM_CXSCREEN);
+    int sh = GetSystemMetrics(SM_CYSCREEN);
+    for (int i = 0; i < g_foundCount; i++) {
+        HWND h = g_found[i].hwnd;
+        if (!IsWindow(h) || !IsWindowVisible(h)) continue;
+        RECT r;
+        if (!GetWindowRect(h, &r)) continue;
+        int w = r.right - r.left;
+        int hgt = r.bottom - r.top;
+        char dbg[160];
+        sprintf_s(dbg, sizeof(dbg), "win %p rect %d,%d %dx%d", (void *)h, (int)r.left, (int)r.top, w, hgt);
+        bar_log(dbg);
+        if (w >= sw - 8 && hgt >= sh - 8) {
+            MoveWindow(h, 0, 0, sw, sh - BAR_HEIGHT, TRUE);
+            bar_log("resized a full window");
+        }
+    }
+}
+
 static void refresh_tasks(void) {
     g_foundCount = 0;
     EnumWindows(enum_proc, 0);
+    keep_windows_off_bar();
     rebuild_tasks();
 }
 
@@ -226,6 +251,7 @@ static void launch_program(int index) {
     WCHAR *slash = wcsrchr(dir, L'\\');
     if (slash) *slash = 0;
     HINSTANCE r = ShellExecuteW(NULL, L"open", g_progPaths[index], NULL, dir, SW_SHOWNORMAL);
+    SetWindowPos(g_bar, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW); BringWindowToTop(g_bar);
     char buf[256];
     sprintf_s(buf, sizeof(buf), "launch %d -> %p", index, (void *)r);
     bar_log(buf);
@@ -378,7 +404,14 @@ static LRESULT CALLBACK bar_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     }
     case WM_TIMER:
-        if (wp == TIMER_REFRESH) refresh_tasks();
+        if (wp == TIMER_REFRESH) {
+            refresh_tasks();
+            if (g_menu == NULL) {
+                SetWindowPos(g_bar, HWND_TOP, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                BringWindowToTop(g_bar);
+            }
+        }
         return 0;
     case WM_COMMAND: {
         int id = LOWORD(wp);
@@ -417,9 +450,12 @@ static LRESULT CALLBACK bar_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         EndPaint(hwnd, &ps);
         return 0;
     }
-    case WM_DESTROY:
+    case WM_DESTROY: {
         KillTimer(hwnd, TIMER_REFRESH);
+        RECT full = {0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)};
+        SystemParametersInfoW(SPI_SETWORKAREA, 0, &full, SPIF_SENDCHANGE);
         PostQuitMessage(0);
+    }
         return 0;
     }
     return DefWindowProcW(hwnd, msg, wp, lp);
@@ -450,13 +486,15 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show) {
     int sh = GetSystemMetrics(SM_CYSCREEN);
     int sw = GetSystemMetrics(SM_CXSCREEN);
 
-    g_bar = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, L"WinOsBar", L"WinOsBar",
+    g_bar = CreateWindowExW(WS_EX_TOOLWINDOW, L"WinOsBar", L"WinOsBar",
         WS_POPUP | WS_VISIBLE, 0, sh - BAR_HEIGHT, sw, BAR_HEIGHT, NULL, NULL, inst, NULL);
     if (!g_bar) return 1;
 
     ShowWindow(g_bar, SW_SHOW);
     UpdateWindow(g_bar);
     bar_log("bar started");
+    RECT wa = {0, 0, sw, sh - BAR_HEIGHT};
+    SystemParametersInfoW(SPI_SETWORKAREA, 0, &wa, SPIF_SENDCHANGE);
 
     MSG msg;
     while (GetMessageW(&msg, NULL, 0, 0) > 0) {
