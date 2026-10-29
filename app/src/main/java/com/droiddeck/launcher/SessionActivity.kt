@@ -3111,10 +3111,12 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
             applyTouchRouting()
         }
         controls.setButtonsOnly(buttonsOnly)
+        val keyboardOnly = forced == SessionPrefs.OSC_NEVER
+        controls.setKeyboardOnly(keyboardOnly)
         val show = when (forced) {
             SessionPrefs.OSC_ALWAYS -> true
             SessionPrefs.OSC_STEAM_QAM -> true
-            SessionPrefs.OSC_NEVER -> false
+            SessionPrefs.OSC_NEVER -> controllerSettings?.keyboardButton != false
             SessionPrefs.OSC_STEAM_TOUCH -> SessionState.mode == SessionService.MODE_STEAM ||
                 (!PadBridge.anyControllerConnected() && SessionState.mode != SessionService.MODE_DESKTOP)
             else -> !PadBridge.anyControllerConnected() && !SteamControllerBle.connected &&
@@ -3139,6 +3141,7 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
         Log.i(TAG, "on-screen controls " + when {
             !drawn -> "hidden"
             buttonsOnly -> "Steam + QAM"
+            keyboardOnly -> "keyboard button only"
             else -> "full pad"
         })
     }
