@@ -183,7 +183,7 @@ class WinOsActivity : Activity() {
                     Intent(this, SessionActivity::class.java)
                         .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
                         .putExtra(SessionService.EXTRA_PROGRAM, command.program)
-                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, command.args.toTypedArray())
+                        .putExtra(SessionService.EXTRA_PROGRAM_ARGS, (listOf("--window", "--desktop", "1600x720") + command.args).toTypedArray())
                         .putExtra(SessionService.EXTRA_GAME_ID, NoSteamLaunch.settingsId(game).toString())
                 )
             }
@@ -206,9 +206,9 @@ class WinOsActivity : Activity() {
                 val folder = SessionLogShare.latest(app)
                 if (folder != null) {
                     b.append("\nSon oturum günlükleri: ").append(folder.name).append('\n')
-                    folder.listFiles()?.filter { LogRedactor.isText(it) }?.sortedBy { it.name }?.take(8)?.forEach { f ->
-                        b.append("\n--- ").append(f.name).append(" (son 80 satır) ---\n")
-                        f.readLines().takeLast(80).forEach { b.append(LogRedactor.redactForShare(it)).append('\n') }
+                    folder.listFiles()?.filter { LogRedactor.isText(it) }?.sortedBy { if (it.name == "session.log") 0 else if (it.name == "wayland.log") 1 else if (it.name == "events.jsonl") 2 else 3 }?.take(5)?.forEach { f ->
+                        b.append("\n--- ").append(f.name).append(" (son 150 satır) ---\n")
+                        f.readLines().takeLast(150).forEach { b.append(LogRedactor.redactForShare(it)).append('\n') }
                     }
                 } else b.append("\nHenüz oturum günlüğü yok.\n")
             }.onFailure { b.append("Günlük okunamadı: ${it.message}\n") }
