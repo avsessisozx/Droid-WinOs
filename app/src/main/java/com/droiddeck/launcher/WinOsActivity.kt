@@ -233,6 +233,11 @@ class WinOsActivity : Activity() {
                     val d = File(root, rel)
                     b.append(rel).append(": ").append(if (d.isDirectory) d.list()?.sorted()?.joinToString(", ").orEmpty().ifEmpty { "(boş)" } else "(yok)").append('\n')
                 }
+                val steamRoot = File(root, "root/.local/share/Steam")
+                b.append("Steam kökü: ").append(steamRoot.list()?.sorted()?.joinToString(", ") ?: "(yok)").append('\n')
+                listOf("linux64", "linux32", "ubuntu12_32", "ubuntu12_64").forEach { d ->
+                    b.append("Steam/").append(d).append(": ").append(File(steamRoot, d).list()?.sorted()?.take(30)?.joinToString(", ") ?: "(yok)").append('\n')
+                }
                 File(root, "root/.local/share/Steam/steamapps/common").listFiles()?.forEach { t ->
                     b.append("[").append(t.name).append("] ").append(t.list()?.sorted()?.take(40)?.joinToString(", ")).append('\n')
                 }
