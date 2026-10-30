@@ -1,5 +1,7 @@
 # Droid-WinOs devir notu (başka bir yapay zekâ için)
 
+Durum: **geliştirme 2026-10-30'da kullanıcı isteğiyle durduruldu.** Kod `main` son commit `716fa3f2` (v0.1.18); sonuçlar DURUM.md'de. Devam edilecekse önce DURUM.md'yi oku, sonra aşağıdaki "Sıradaki işler" listesinden başla.
+
 Amaç: Android telefonda taşınabilir Windows ortamı. Windows programları (oyun değil) kurulup çalışsın, masaüstü gibi kullanılsın. Kullanıcı programcı değil, Türkçe konuşuyor. Kısa, numaralı, sade adımlar ister. Onu test kullanıcısı yapma: uygulamayı sen telefonda dene, çalışan hâlini ver.
 
 ## Depo ve dallar

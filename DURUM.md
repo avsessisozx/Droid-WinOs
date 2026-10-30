@@ -1,5 +1,6 @@
 # Droid-WinOs durum
 
+Durum: **geliştirme durduruldu (2026-10-30)**. Son sürüm v0.1.18 telefonda kurulu; aşağıdaki liste o günkü doğrulanmış hâli anlatır.
 Sürüm: v0.1.18-winos (görev çubuğu pencerelerin üstünde kalıyor)
 Tarih: 2026-10-30
 
