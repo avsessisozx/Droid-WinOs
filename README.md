@@ -3,7 +3,7 @@
 <p align="center"><b>Windows programlarını telefonunda çalıştır.</b><br>Steam gerekmez. Oyun için değil, programlar için.</p>
 
 <p align="center">
-  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/avsessisozx/Droid-WinOs?include_prereleases&label=indir&color=2ea44f" alt="Son sürüm"></a>
+  <a href="../../releases"><img src="https://img.shields.io/github/v/release/avsessisozx/Droid-WinOs?include_prereleases&label=indir&color=2ea44f" alt="Son sürüm"></a>
   <img src="https://img.shields.io/badge/Android-12%2B-3ddc84" alt="Android 12+">
   <img src="https://img.shields.io/badge/lisans-GPL--3.0-blue" alt="GPL-3.0">
 </p>
